@@ -1,0 +1,39 @@
+version: '3.9'
+
+services:
+
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - SECRET_KEY=dev-secret-key-change-in-prod
+      - DATABASE_URL=postgresql://estateiq:estateiq@db:5432/estateiq
+    volumes:
+      - .:/app
+      - ./model:/app/model
+    depends_on:
+      db:
+        condition: service_healthy
+    command: gunicorn "app:create_app()" --bind 0.0.0.0:5000 --reload --workers 2
+
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: estateiq
+      POSTGRES_PASSWORD: estateiq
+      POSTGRES_DB: estateiq
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U estateiq"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_data:
