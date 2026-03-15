@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+{% block title %}Create Account — EstateIQ{% endblock %}
+
+{% block extra_head %}
+<style>
+  body { display: flex; flex-direction: column; }
+
+  .auth-root {
+    flex: 1; min-height: 100vh;
+    display: grid; grid-template-columns: 1fr 1.1fr;
+  }
+
+  /* ── LEFT FORM PANEL ── */
+  .auth-form-side {
+    display: flex; align-items: center; justify-content: center;
+    padding: 3rem 2.5rem;
+    background: var(--surface);
+    position: relative;
+  }
+  .auth-form-side::after {
+    content: '';
+    position: absolute; top: 0; bottom: 0; right: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--amber-dk), transparent);
+    opacity: .5;
+  }
+
+  .form-box { width: 100%; max-width: 440px; }
+
+  .form-header { margin-bottom: 2rem; }
+  .form-header h2 {
+    font-family: var(--font-display);
+    font-size: 2.6rem; font-weight: 600; line-height: 1.1;
+    margin-bottom: .4rem;
+  }
+  .form-header p { color: var(--text-md); font-size: .88rem; }
+
+  .g2-form { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+  .submit-btn {
+    width: 100%; height: 52px; font-size: .85rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    background: var(--amber); color: #000; border: none;
+    border-radius: var(--radius-sm); cursor: pointer;
+    position: relative; overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+    font-family: var(--font-ui);
+  }
+  .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 0 30px rgba(255,190,60,.45); }
+
+  .strength-bar {
+    height: 3px; background: var(--border); border-radius: 2px; margin-top: .4rem;
+    overflow: hidden;
+  }
+  .strength-fill { height: 100%; border-radius: 2px; width: 0%; transition: width .3s, background .3s; }
+  .strength-text { font-size: .7rem; color: var(--text-dim); margin-top: .3rem; }
+
+  .auth-switch { margin-top: 1.5rem; text-align: center; font-size: .85rem; color: var(--text-md); }
+  .auth-switch a { color: var(--amber); text-decoration: none; font-weight: 600; }
+
+  /* ── RIGHT VISUAL PANEL ── */
+  .auth-visual {
+    position: relative; overflow: hidden;
+    background: var(--deep);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 4rem 3rem;
+  }
+
+  .auth-visual::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 80% 30%, rgba(56,217,245,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 80% 60% at 20% 80%, rgba(255,190,60,0.1) 0%, transparent 60%);
+    z-index: 0;
+  }
+
+  .visual-inner { position: relative; z-index: 1; }
+
+  .vis-tag {
+    display: inline-block; padding: .3rem .9rem;
+    border: 1px solid rgba(56,217,245,0.3); border-radius: 40px;
+    color: var(--cyan); font-size: .68rem; letter-spacing: .18em;
+    text-transform: uppercase; margin-bottom: 2rem;
+    background: rgba(56,217,245,0.05);
+  }
+
+  .vis-title {
+    font-family: var(--font-display);
+    font-size: 3.2rem; font-weight: 300; line-height: 1.1;
+    margin-bottom: 1.5rem;
+  }
+  .vis-title strong { font-weight: 700; color: var(--amber); }
+
+  .feature-list { list-style: none; display: flex; flex-direction: column; gap: .9rem; margin-bottom: 2.5rem; }
+  .feature-item {
+    display: flex; align-items: flex-start; gap: 1rem;
+    padding: .9rem 1.1rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    transition: border-color .2s, background .2s;
+  }
+  .feature-item:hover { border-color: rgba(255,190,60,0.2); background: rgba(255,190,60,0.03); }
+
+  .feat-icon {
+    width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+  }
+  .feat-title { font-size: .85rem; font-weight: 600; color: var(--text); margin-bottom: .15rem; }
+  .feat-desc  { font-size: .78rem; color: var(--text-dim); line-height: 1.5; }
+
+  /* Ticker */
+  .ticker {
+    display: flex; gap: 2rem; padding: 1rem 0;
+    border-top: 1px solid var(--border);
+    overflow: hidden; position: relative;
+  }
+  .ticker-inner { display: flex; gap: 2rem; animation: ticker 20s linear infinite; white-space: nowrap; }
+  @keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+  .tick { font-size: .72rem; color: var(--text-dim); }
+  .tick strong { color: var(--mint); margin-left: .3rem; }
+
+  @media (max-width: 768px) {
+    .auth-root { grid-template-columns: 1fr; }
+    .auth-visual { display: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-root">
+
+  <!-- ── LEFT FORM PANEL ── -->
+  <div class="auth-form-side">
+    <div class="form-box fade-up">
+      <div style="margin-bottom:1.5rem;">
+        <a href="{{ url_for('auth.login') }}" class="nav-logo" style="font-size:1.5rem; text-decoration:none;">Estate<em style="font-style:normal;color:var(--text);font-weight:300;">IQ</em></a>
+      </div>
+      <div class="form-header">
+        <div class="eyebrow" style="margin-bottom:.6rem;">New Account</div>
+        <h2>Get <span class="amber">Started</span></h2>
+        <p>Free forever. No credit card required.</p>
+      </div>
+
+      {% for category, message in get_flashed_messages(with_categories=true) %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+
+      <form method="POST" action="{{ url_for('auth.register') }}">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" name="username" placeholder="johndoe" required minlength="3"/>
+        </div>
+
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" name="email" placeholder="you@example.com" required/>
+        </div>
+
+        <div class="g2-form">
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" name="password" id="pwdMain" placeholder="••••••••" required minlength="6" oninput="checkStrength(this.value)"/>
+            <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+            <div class="strength-text" id="strengthText">Enter password</div>
+          </div>
+          <div class="form-group">
+            <label>Confirm</label>
+            <input type="password" name="confirm_password" placeholder="••••••••" required/>
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" style="margin-top:.5rem;">Create Free Account →</button>
+      </form>
+
+      <div class="auth-switch">
+        Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT VISUAL PANEL ── -->
+  <div class="auth-visual">
+    <div class="visual-inner">
+      <div class="vis-tag">Why EstateIQ?</div>
+      <h2 class="vis-title">
+        Smarter<br>Real Estate<br><strong>Decisions.</strong>
+      </h2>
+
+      <ul class="feature-list">
+        <li class="feature-item">
+          <div class="feat-icon" style="background:rgba(255,190,60,0.1);">🧠</div>
+          <div>
+            <div class="feat-title">ML-Powered Valuations</div>
+            <div class="feat-desc">Gradient Boosting & Random Forest models cross-validated on real transaction data.</div>
+          </div>
+        </li>
+        <li class="feature-item">
+          <div class="feat-icon" style="background:rgba(56,217,245,0.1);">📍</div>
+          <div>
+            <div class="feat-title">240+ Localities Covered</div>
+            <div class="feat-desc">Hyper-local price intelligence across hundreds of neighbourhoods.</div>
+          </div>
+        </li>
+        <li class="feature-item">
+          <div class="feat-icon" style="background:rgba(77,255,160,0.1);">⚡</div>
+          <div>
+            <div class="feat-title">Instant API Access</div>
+            <div class="feat-desc">REST API to integrate property valuations into your own tools.</div>
+          </div>
+        </li>
+        <li class="feature-item">
+          <div class="feat-icon" style="background:rgba(255,107,122,0.1);">📊</div>
+          <div>
+            <div class="feat-title">Full Prediction History</div>
+            <div class="feat-desc">Track every valuation, compare trends, and export reports.</div>
+          </div>
+        </li>
+      </ul>
+
+      <div class="ticker">
+        <div class="ticker-inner">
+          <span class="tick">Whitefield <strong>↑ 4.2%</strong></span>
+          <span class="tick">Koramangala <strong>↑ 6.1%</strong></span>
+          <span class="tick">Indiranagar <strong>↑ 3.8%</strong></span>
+          <span class="tick">HSR Layout <strong>↑ 5.5%</strong></span>
+          <span class="tick">Electronic City <strong>↑ 2.9%</strong></span>
+          <span class="tick">Marathahalli <strong>↑ 4.7%</strong></span>
+          <span class="tick">Whitefield <strong>↑ 4.2%</strong></span>
+          <span class="tick">Koramangala <strong>↑ 6.1%</strong></span>
+          <span class="tick">Indiranagar <strong>↑ 3.8%</strong></span>
+          <span class="tick">HSR Layout <strong>↑ 5.5%</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function checkStrength(val) {
+  const fill = document.getElementById('strengthFill');
+  const text = document.getElementById('strengthText');
+  let score = 0;
+  if (val.length >= 6) score++;
+  if (val.length >= 10) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  const configs = [
+    { w:'0%',    bg:'transparent', t:'Enter password' },
+    { w:'20%',   bg:'var(--rose)', t:'Very weak' },
+    { w:'40%',   bg:'#ff8c42',     t:'Weak' },
+    { w:'60%',   bg:'var(--amber)',t:'Fair' },
+    { w:'80%',   bg:'#8bdf6f',     t:'Strong' },
+    { w:'100%',  bg:'var(--mint)', t:'Very strong ✓' },
+  ];
+  const c = configs[score];
+  fill.style.width = c.w;
+  fill.style.background = c.bg;
+  text.textContent = c.t;
+  text.style.color = c.bg === 'transparent' ? 'var(--text-dim)' : c.bg;
+}
+</script>
+{% endblock %}

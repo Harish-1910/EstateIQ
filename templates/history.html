@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% block title %}Valuation History — EstateIQ{% endblock %}
+
+{% block extra_head %}
+<style>
+  .hist-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem;
+  }
+  .hist-header h1 { font-family: var(--font-display); font-size: 2.8rem; font-weight: 300; }
+  .hist-header h1 strong { font-weight: 700; color: var(--amber); }
+  .hist-header p { color: var(--text-md); font-size: .88rem; margin-top: .3rem; }
+
+  /* ── TABLE CARD ── */
+  .hist-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+    position: relative;
+  }
+  .hist-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,190,60,0.3), transparent);
+  }
+
+  /* Table header row */
+  .hist-table-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--border);
+  }
+  .hist-count { font-size: .75rem; color: var(--text-dim); }
+  .hist-count strong { color: var(--amber); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; padding: .7rem 1.25rem;
+    font-size: .62rem; font-weight: 800; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--text-dim); background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: .88rem; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr { transition: background .15s; }
+  tbody tr:hover td { background: rgba(255,190,60,0.03); }
+
+  /* Cells */
+  .cell-loc {
+    font-weight: 500; max-width: 160px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cell-price { color: var(--amber); font-weight: 700; font-family: var(--font-display); font-size: 1rem; }
+  .cell-pps   { color: var(--text-md); font-size: .82rem; }
+  .cell-date  { color: var(--text-dim); font-size: .78rem; }
+  .cell-idx   { color: var(--text-dim); font-size: .75rem; font-family: var(--font-display); }
+
+  .config-badge {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .2rem .7rem; border-radius: 6px;
+    background: rgba(56,217,245,0.08); border: 1px solid rgba(56,217,245,0.15);
+    color: var(--cyan); font-size: .72rem; font-weight: 600; letter-spacing: .05em;
+  }
+
+  /* ── PAGINATION ── */
+  .pagination {
+    display: flex; align-items: center; justify-content: center; gap: .5rem;
+    padding: 1.25rem; border-top: 1px solid var(--border);
+  }
+  .page-btn {
+    min-width: 36px; height: 36px; padding: 0 .75rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm); text-decoration: none;
+    font-size: .8rem; font-weight: 600; font-family: var(--font-ui);
+    border: 1px solid var(--border); color: var(--text-md);
+    transition: all .2s;
+  }
+  .page-btn:hover   { border-color: var(--amber); color: var(--amber); background: rgba(255,190,60,.06); }
+  .page-btn.active  { background: var(--amber); color: #000; border-color: var(--amber); }
+  .page-btn.disabled{ opacity: .35; pointer-events: none; }
+  .page-ellipsis    { color: var(--text-dim); font-size: .85rem; }
+
+  /* ── EMPTY STATE ── */
+  .empty-hist {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 5rem 2rem; text-align: center;
+  }
+  .empty-hist-icon { font-size: 3rem; margin-bottom: 1rem; opacity: .35; }
+  .empty-hist h3   { font-family: var(--font-display); font-size: 1.5rem; margin-bottom: .5rem; }
+  .empty-hist p    { color: var(--text-dim); margin-bottom: 1.5rem; font-size: .88rem; }
+
+  /* ── SUMMARY ROW ── */
+  .summary-strip {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  @media(max-width:600px){ .summary-strip{ grid-template-columns: 1fr; } }
+  .sum-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.1rem 1.4rem;
+    display: flex; align-items: center; gap: 1rem;
+  }
+  .sum-icon { font-size: 1.3rem; opacity: .8; }
+  .sum-val  { font-family: var(--font-display); font-size: 1.4rem; color: var(--amber); line-height: 1; }
+  .sum-lbl  { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); margin-top: .15rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <!-- Header -->
+  <div class="hist-header fade-up">
+    <div>
+      <div class="eyebrow" style="margin-bottom:.5rem;">Your Records</div>
+      <h1>Valuation <strong>History</strong></h1>
+      <p>Complete log of all your AI property valuations.</p>
+    </div>
+    <a href="{{ url_for('main.predict') }}" class="btn btn-amber btn-lg">+ New Valuation</a>
+  </div>
+
+  {% if predictions.items %}
+  <!-- Summary strip -->
+  <div class="summary-strip fade-up-2">
+    <div class="sum-card">
+      <div class="sum-icon">📊</div>
+      <div>
+        <div class="sum-val">{{ predictions.total }}</div>
+        <div class="sum-lbl">Total Valuations</div>
+      </div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon">💰</div>
+      <div>
+        <div class="sum-val">
+          ₹ {{ "%.1f" | format(predictions.items | map(attribute='predicted_price') | list | sum / predictions.items | length) }} L
+        </div>
+        <div class="sum-lbl">Avg Predicted Price</div>
+      </div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon">📍</div>
+      <div>
+        <div class="sum-val">{{ predictions.pages }}</div>
+        <div class="sum-lbl">Pages of Results</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="hist-card fade-up-3">
+    <div class="hist-table-head">
+      <span class="hist-count">
+        Showing <strong>{{ predictions.items | length }}</strong> of <strong>{{ predictions.total }}</strong> records
+      </span>
+      <span class="badge badge-amber badge-dot">Live Data</span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Location</th>
+          <th>Configuration</th>
+          <th>Area</th>
+          <th>Predicted Price</th>
+          <th>₹ / sqft</th>
+          <th>Date &amp; Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in predictions.items %}
+        <tr>
+          <td class="cell-idx">{{ loop.index + (predictions.page - 1) * predictions.per_page }}</td>
+          <td class="cell-loc">{{ p.location }}</td>
+          <td><span class="config-badge">{{ p.bhk }} BHK · {{ p.bath }} Bath</span></td>
+          <td>{{ p.total_sqft | int }} sqft</td>
+          <td class="cell-price">₹ {{ "%.2f" | format(p.predicted_price) }} L</td>
+          <td class="cell-pps">₹ {{ "{:,}".format(((p.predicted_price * 100000) / p.total_sqft) | int) }}</td>
+          <td class="cell-date">{{ p.created_at.strftime('%d %b %Y') }}<br><span style="opacity:.6;">{{ p.created_at.strftime('%I:%M %p') }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if predictions.pages > 1 %}
+    <div class="pagination">
+      <a href="{{ url_for('main.history', page=predictions.prev_num) }}"
+         class="page-btn {% if not predictions.has_prev %}disabled{% endif %}">← Prev</a>
+
+      {% for pg in predictions.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if pg %}
+          <a href="{{ url_for('main.history', page=pg) }}"
+             class="page-btn {% if pg == predictions.page %}active{% endif %}">{{ pg }}</a>
+        {% else %}
+          <span class="page-ellipsis">…</span>
+        {% endif %}
+      {% endfor %}
+
+      <a href="{{ url_for('main.history', page=predictions.next_num) }}"
+         class="page-btn {% if not predictions.has_next %}disabled{% endif %}">Next →</a>
+    </div>
+    {% endif %}
+  </div>
+
+  {% else %}
+  <!-- Empty state -->
+  <div class="hist-card fade-up-2">
+    <div class="empty-hist">
+      <div class="empty-hist-icon">🏘</div>
+      <h3>No valuations yet</h3>
+      <p>Your prediction history will appear here once you run your first valuation.</p>
+      <a href="{{ url_for('main.predict') }}" class="btn btn-amber btn-lg">Get Your First Valuation →</a>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

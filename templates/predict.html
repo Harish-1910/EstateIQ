@@ -1,0 +1,443 @@
+{% extends 'base.html' %}
+{% block title %}Property Valuation — EstateIQ{% endblock %}
+
+{% block extra_head %}
+<style>
+  .pred-layout { display: grid; grid-template-columns: 1fr 360px; gap: 2rem; align-items: start; }
+  @media(max-width:960px){ .pred-layout{ grid-template-columns: 1fr; } }
+
+  .pred-header { margin-bottom: 2.5rem; }
+  .pred-header h1 { font-family: var(--font-display); font-size: 3rem; font-weight: 300; line-height: 1.1; }
+  .pred-header h1 strong { font-weight: 700; color: var(--amber); }
+  .pred-header p { color: var(--text-md); margin-top: .5rem; font-size: .9rem; }
+
+  /* ── CITY TABS ── */
+  .city-tabs {
+    display: flex; gap: .5rem; margin-bottom: 1.5rem;
+    padding: .35rem; background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border); border-radius: 10px;
+    width: fit-content;
+  }
+  .city-tab {
+    padding: .55rem 1.4rem; border-radius: 7px; cursor: pointer;
+    font-size: .78rem; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; border: 1px solid transparent;
+    transition: all .2s; color: var(--text-dim);
+    user-select: none;
+  }
+  .city-tab:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+  .city-tab.active {
+    background: var(--amber); color: #000;
+    border-color: var(--amber);
+    box-shadow: 0 0 16px rgba(255,190,60,.3);
+  }
+  .city-tab .tab-flag { margin-right: .4rem; }
+  .city-all.active { background: var(--card-hi); color: var(--text); border-color: var(--border-hi); box-shadow: none; }
+
+  /* ── FORM CARD ── */
+  .form-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden; position: relative;
+  }
+  .form-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--amber-dk), var(--amber), var(--cyan), var(--amber-dk));
+    background-size: 200% 100%; animation: shimmer 4s linear infinite;
+  }
+  @keyframes shimmer { 0%{background-position:0% 0} 100%{background-position:200% 0} }
+  .form-body { padding: 2rem; }
+
+  .step-section { margin-bottom: 1.75rem; }
+  .step-head {
+    display: flex; align-items: center; gap: .75rem;
+    margin-bottom: 1.1rem; padding-bottom: .75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .step-num {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,190,60,0.12); border: 1px solid rgba(255,190,60,0.3);
+    font-size: .72rem; font-weight: 800; color: var(--amber);
+  }
+  .step-title { font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--text-md); }
+
+  /* location search */
+  .loc-wrap { position: relative; }
+  .loc-wrap .sicon { position: absolute; left:1rem; top:50%; transform:translateY(-50%); color:var(--text-dim); pointer-events:none; }
+  .loc-wrap input { padding-left: 2.75rem; }
+  #loc-suggestions {
+    position: absolute; z-index: 200; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--card-hi); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); max-height: 240px; overflow-y: auto;
+    display: none; box-shadow: 0 20px 40px rgba(0,0,0,.5);
+  }
+  .sug-item {
+    padding: .65rem 1.1rem; cursor: pointer; font-size: .88rem;
+    display: flex; align-items: center; justify-content: space-between;
+    color: var(--text-md); border-bottom: 1px solid rgba(255,255,255,.04);
+    transition: background .15s, color .15s;
+  }
+  .sug-item:last-child { border-bottom: none; }
+  .sug-item:hover { background: rgba(255,190,60,0.08); color: var(--amber); }
+  .sug-city-tag {
+    font-size: .65rem; padding: .15rem .5rem; border-radius: 4px;
+    font-weight: 700; letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0;
+  }
+  .tag-blr { background: rgba(255,190,60,.12); color: var(--amber); }
+  .tag-chn { background: rgba(56,217,245,.1);  color: var(--cyan); }
+
+  #loc-selected-banner {
+    margin-top: .6rem; padding: .6rem 1rem; border-radius: var(--radius-sm);
+    background: rgba(255,190,60,0.08); border: 1px solid rgba(255,190,60,0.25);
+    color: var(--amber); font-size: .85rem;
+    display: none; align-items: center; justify-content: space-between;
+  }
+
+  /* Spin controls */
+  .spin-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .spin-control {
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); display: flex; align-items: stretch;
+    overflow: hidden; transition: border-color .2s;
+  }
+  .spin-control:focus-within { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(255,190,60,.1); }
+  .spin-btn {
+    width: 40px; background: rgba(255,255,255,0.04); border: none; cursor: pointer;
+    color: var(--text-md); font-size: 1.1rem; flex-shrink: 0;
+    transition: background .15s, color .15s;
+  }
+  .spin-btn:hover { background: rgba(255,190,60,.1); color: var(--amber); }
+  .spin-val {
+    flex:1; text-align:center; background:transparent; border:none;
+    color:var(--text); font-family:var(--font-ui); font-size:1rem; font-weight:600;
+    padding:.8rem .25rem; outline:none;
+  }
+
+  .form-footer {
+    padding: 1.5rem 2rem; background: rgba(255,255,255,0.02);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .form-disclaimer { font-size: .72rem; color: var(--text-dim); max-width: 240px; line-height: 1.5; }
+  .predict-btn {
+    padding: .9rem 2.5rem; font-size: .82rem; background: var(--amber); color: #000;
+    border: none; border-radius: var(--radius-sm); font-family: var(--font-ui);
+    font-weight: 800; letter-spacing: .1em; text-transform: uppercase; cursor: pointer;
+    position: relative; overflow: hidden; flex-shrink: 0;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .predict-btn:hover { transform: translateY(-2px); box-shadow: 0 0 35px rgba(255,190,60,.5); }
+
+  /* sidebar */
+  .sidebar-panel {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.25rem;
+    position: relative; overflow: hidden;
+  }
+  .sidebar-panel::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,190,60,0.2), transparent);
+  }
+  .panel-title { font-size: .68rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 1rem; }
+
+  .city-stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  .city-stat {
+    padding: .9rem 1rem; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); text-align: center;
+  }
+  .cs-val { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; }
+  .cs-lbl { font-size: .65rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); margin-top: .2rem; }
+
+  .feat-bar-row { margin-bottom: .85rem; }
+  .feat-bar-top { display: flex; justify-content: space-between; font-size: .8rem; margin-bottom: .35rem; }
+  .feat-bar-top span:last-child { color: var(--amber); font-weight: 600; }
+  .feat-bar-bg { height: 4px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; }
+  .feat-bar-fill {
+    height: 100%; border-radius: 2px;
+    background: linear-gradient(90deg, var(--amber-dk), var(--amber));
+    transform-origin: left; transform: scaleX(0);
+    transition: transform 1s cubic-bezier(.22,1,.36,1);
+  }
+
+  .dataset-link {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .85rem 1rem; background: rgba(56,217,245,0.06);
+    border: 1px solid rgba(56,217,245,0.15); border-radius: var(--radius-sm);
+    text-decoration: none; transition: background .2s, border-color .2s;
+    margin-bottom: .6rem;
+  }
+  .dataset-link:hover { background: rgba(56,217,245,0.1); border-color: rgba(56,217,245,0.3); }
+  .dl-text { font-size: .8rem; color: var(--text-md); flex: 1; }
+  .dl-text strong { display: block; font-size: .83rem; margin-bottom: .1rem; }
+  .blr-link strong { color: var(--amber); }
+  .chn-link strong { color: var(--cyan);  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="pred-header fade-up">
+    <div class="eyebrow" style="margin-bottom:.6rem;">AI Property Valuation</div>
+    <h1>Estimate <strong>Market Value</strong></h1>
+    <p>Covers Bengaluru &amp; Chennai. Select a city tab to filter locations, or search across both.</p>
+  </div>
+
+  <div class="pred-layout">
+
+    <!-- ── FORM ── -->
+    <div class="fade-up-2">
+      {% for category, message in get_flashed_messages(with_categories=true) %}
+        <div class="alert alert-{{ category }}" style="margin-bottom:1rem;">{{ message }}</div>
+      {% endfor %}
+
+      <!-- City Tabs -->
+      {% if cities %}
+      <div class="city-tabs">
+        <div class="city-tab city-all active" data-city="all">🌐 All Cities</div>
+        {% for c in cities %}
+        <div class="city-tab" data-city="{{ c }}">
+          {% if c == 'bengaluru' %}🏙 Bengaluru{% elif c == 'chennai' %}🌊 Chennai{% else %}📍 {{ c.title() }}{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('main.predict') }}" id="predForm">
+        <input type="hidden" name="city" id="cityHidden" value=""/>
+
+        <div class="form-card">
+          <div class="form-body">
+
+            <!-- Step 1: Location -->
+            <div class="step-section">
+              <div class="step-head">
+                <div class="step-num">1</div>
+                <div class="step-title">Select Locality</div>
+              </div>
+              <div class="form-group" style="position:relative;">
+                <label>Search Area / Neighbourhood</label>
+                <div class="loc-wrap">
+                  <span class="sicon">⌕</span>
+                  <input type="text" id="locSearch" placeholder="e.g. Anna Nagar, Whitefield, Adyar…" autocomplete="off"/>
+                </div>
+                <div id="loc-suggestions"></div>
+                <input type="hidden" name="location" id="locHidden" required/>
+                <div id="loc-selected-banner">
+                  <span>📍 <span id="locText"></span> <span id="locCityTag" class="sug-city-tag" style="margin-left:.5rem;"></span></span>
+                  <span id="locClear" style="cursor:pointer;opacity:.6;font-size:.8rem;">✕ Clear</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2: Area -->
+            <div class="step-section">
+              <div class="step-head">
+                <div class="step-num">2</div>
+                <div class="step-title">Property Area</div>
+              </div>
+              <div class="form-group">
+                <label>Total Area in Square Feet</label>
+                <input type="number" name="total_sqft" placeholder="e.g. 1200" min="200" max="50000" required style="font-size:1.05rem;font-weight:500;"/>
+              </div>
+            </div>
+
+            <!-- Step 3: Config -->
+            <div class="step-section" style="margin-bottom:0;">
+              <div class="step-head">
+                <div class="step-num">3</div>
+                <div class="step-title">Room Configuration</div>
+              </div>
+              <div class="spin-row">
+                <div>
+                  <label>Bedrooms (BHK)</label>
+                  <div class="spin-control">
+                    <button type="button" class="spin-btn" onclick="spin('bhk',-1)">−</button>
+                    <input type="number" class="spin-val" name="bhk" id="bhk" value="2" min="1" max="6" readonly/>
+                    <button type="button" class="spin-btn" onclick="spin('bhk',1)">+</button>
+                  </div>
+                </div>
+                <div>
+                  <label>Bathrooms</label>
+                  <div class="spin-control">
+                    <button type="button" class="spin-btn" onclick="spin('bath',-1)">−</button>
+                    <input type="number" class="spin-val" name="bath" id="bath" value="2" min="1" max="6" readonly/>
+                    <button type="button" class="spin-btn" onclick="spin('bath',1)">+</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="form-footer">
+            <div class="form-disclaimer">Predictions are estimates based on historical data. Actual prices may vary.</div>
+            <button type="submit" class="predict-btn">✦ &nbsp;Get Valuation</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- ── SIDEBAR ── -->
+    <div class="fade-up-3">
+
+      <!-- City stats -->
+      {% set meta = get_meta() if get_meta is defined else {} %}
+      <div class="sidebar-panel">
+        <div class="panel-title">Dataset Coverage</div>
+        <div class="city-stat-row">
+          {% if 'bengaluru' in (meta.get('cities') or []) %}
+          <div class="city-stat">
+            <div class="cs-val" style="color:var(--amber);">🏙</div>
+            <div class="cs-val amber">{{ (meta.get('loc_by_city') or {}).get('bengaluru', []) | length }}+</div>
+            <div class="cs-lbl">Bengaluru Localities</div>
+          </div>
+          {% endif %}
+          {% if 'chennai' in (meta.get('cities') or []) %}
+          <div class="city-stat">
+            <div class="cs-val" style="color:var(--cyan);">🌊</div>
+            <div class="cs-val" style="color:var(--cyan);">{{ (meta.get('loc_by_city') or {}).get('chennai', []) | length }}+</div>
+            <div class="cs-lbl">Chennai Localities</div>
+          </div>
+          {% endif %}
+        </div>
+        {% if meta.get('n_samples') %}
+        <div style="margin-top:.9rem; font-size:.78rem; color:var(--text-dim); text-align:center;">
+          Trained on <strong style="color:var(--text);">{{ "{:,}".format(meta.n_samples) }}</strong> property transactions
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Feature importance -->
+      <div class="sidebar-panel">
+        <div class="panel-title">Feature Importance</div>
+        {% for name, pct in [('Location', 87), ('Area (sqft)', 74), ('BHK Count', 61), ('City', 55), ('Bathrooms', 44)] %}
+        <div class="feat-bar-row">
+          <div class="feat-bar-top"><span style="color:var(--text-md);">{{ name }}</span><span>{{ pct }}%</span></div>
+          <div class="feat-bar-bg"><div class="feat-bar-fill" data-pct="{{ pct }}"></div></div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Dataset links -->
+      <div class="sidebar-panel">
+        <div class="panel-title">Datasets Used</div>
+        <a href="https://www.kaggle.com/datasets/amitabhajoy/bengaluru-house-price-data" target="_blank" class="dataset-link blr-link">
+          <span>🏙</span>
+          <div class="dl-text"><strong>Bengaluru House Price Data</strong>Kaggle · rename → Bengaluru_House_Data.csv</div>
+          <span style="color:var(--amber);">↗</span>
+        </a>
+        <a href="https://www.kaggle.com/datasets/kunwarakash/chennai-housing-sales-price" target="_blank" class="dataset-link chn-link">
+          <span>🌊</span>
+          <div class="dl-text"><strong>Chennai Housing Sales Price</strong>Kaggle · rename → Chennai_House_Price.csv</div>
+          <span style="color:var(--cyan);">↗</span>
+        </a>
+        <div style="font-size:.75rem;color:var(--text-dim);margin-top:.75rem;">
+          Place either or both CSV files in the project root, then run <code style="color:var(--amber);">python ml_model.py</code>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── All locations with city tags
+const locsByCity = {{ cities_locations | tojson }};
+const cityColors = { bengaluru: 'tag-blr', chennai: 'tag-chn' };
+const cityLabels = { bengaluru: 'BLR', chennai: 'CHN' };
+
+// Build flat list: [{loc, city}, ...]
+let allLocs = [];
+for (const [city, locs] of Object.entries(locsByCity)) {
+  locs.forEach(l => allLocs.push({ loc: l, city }));
+}
+// Fallback if locsByCity is empty
+{% if not cities_locations %}
+const rawLocs = {{ locations | tojson }};
+allLocs = rawLocs.map(l => ({ loc: l, city: '' }));
+{% endif %}
+
+let activeCity = 'all';
+
+// ── City tab switching
+document.querySelectorAll('.city-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.city-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    activeCity = tab.dataset.city;
+    document.getElementById('cityHidden').value = activeCity === 'all' ? '' : activeCity;
+    // Clear current selection
+    document.getElementById('locHidden').value = '';
+    document.getElementById('loc-selected-banner').style.display = 'none';
+    document.getElementById('loc-suggestions').style.display = 'none';
+    document.getElementById('locSearch').value = '';
+  });
+});
+
+// ── Autocomplete
+const searchInput = document.getElementById('locSearch');
+const hiddenInput = document.getElementById('locHidden');
+const sugBox      = document.getElementById('loc-suggestions');
+const banner      = document.getElementById('loc-selected-banner');
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  sugBox.innerHTML = '';
+  if (!q) { sugBox.style.display = 'none'; return; }
+
+  const filtered = allLocs.filter(item => {
+    const cityMatch = activeCity === 'all' || item.city === activeCity;
+    return cityMatch && item.loc.toLowerCase().includes(q);
+  }).slice(0, 12);
+
+  if (!filtered.length) { sugBox.style.display = 'none'; return; }
+
+  filtered.forEach(({ loc, city }) => {
+    const d = document.createElement('div');
+    d.className = 'sug-item';
+    const tag = city ? `<span class="sug-city-tag ${cityColors[city] || ''}">${cityLabels[city] || city.toUpperCase()}</span>` : '';
+    d.innerHTML = `<span>${loc}</span>${tag}`;
+    d.onclick = () => selectLoc(loc, city);
+    sugBox.appendChild(d);
+  });
+  sugBox.style.display = 'block';
+});
+
+function selectLoc(loc, city) {
+  hiddenInput.value = loc;
+  if (city) document.getElementById('cityHidden').value = city;
+  searchInput.value = '';
+  sugBox.style.display = 'none';
+  document.getElementById('locText').textContent = loc;
+  const tagEl = document.getElementById('locCityTag');
+  if (city) {
+    tagEl.textContent = cityLabels[city] || city.toUpperCase();
+    tagEl.className   = `sug-city-tag ${cityColors[city] || ''}`;
+  }
+  banner.style.display = 'flex';
+}
+
+document.getElementById('locClear').onclick = () => {
+  hiddenInput.value = '';
+  banner.style.display = 'none';
+};
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#locSearch') && !e.target.closest('#loc-suggestions'))
+    sugBox.style.display = 'none';
+});
+
+// ── Spinners
+function spin(field, delta) {
+  const el = document.getElementById(field);
+  el.value = Math.max(+el.min, Math.min(+el.max, +el.value + delta));
+}
+
+// ── Animate feature bars
+setTimeout(() => {
+  document.querySelectorAll('.feat-bar-fill').forEach(el => {
+    el.style.transform = `scaleX(${el.dataset.pct / 100})`;
+  });
+}, 400);
+</script>
+{% endblock %}

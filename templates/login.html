@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+{% block title %}Sign In — EstateIQ{% endblock %}
+
+{% block extra_head %}
+<style>
+  body { display: flex; flex-direction: column; }
+
+  .auth-root {
+    flex: 1; min-height: 100vh;
+    display: grid; grid-template-columns: 1.1fr 1fr;
+  }
+
+  /* ── LEFT PANEL ── */
+  .auth-visual {
+    position: relative; overflow: hidden;
+    background: var(--deep);
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 3rem;
+  }
+
+  /* Animated mesh background */
+  .auth-visual::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 80%, rgba(255,190,60,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 80% 20%, rgba(56,217,245,0.06) 0%, transparent 60%),
+      linear-gradient(170deg, var(--deep) 0%, #060a18 100%);
+    z-index: 0;
+  }
+
+  /* Floating data nodes */
+  .data-nodes { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+  .node {
+    position: absolute; border-radius: 50%;
+    border: 1px solid rgba(255,190,60,0.2);
+    animation: nodeFloat linear infinite;
+  }
+  .node::after {
+    content: ''; position: absolute; inset: 4px; border-radius: 50%;
+    background: rgba(255,190,60,0.08);
+  }
+
+  @keyframes nodeFloat {
+    0%   { transform: translate(0,0) scale(1); opacity: 0.6; }
+    50%  { opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(.8); opacity: 0.4; }
+  }
+
+  /* Connecting lines SVG */
+  .auth-visual canvas { position: absolute; inset: 0; z-index: 1; opacity: .5; }
+
+  .visual-content { position: relative; z-index: 2; }
+
+  .vis-logo {
+    font-family: var(--font-display);
+    font-size: 1.8rem; font-weight: 700; color: var(--amber);
+    text-decoration: none;
+    display: flex; align-items: baseline; gap: .1rem;
+  }
+  .vis-logo em { font-style: normal; color: var(--text); font-weight: 300; }
+
+  .vis-bottom { position: relative; z-index: 2; }
+
+  .vis-tag {
+    display: inline-block; padding: .3rem .9rem;
+    border: 1px solid rgba(255,190,60,0.4); border-radius: 40px;
+    color: var(--amber); font-size: .68rem; letter-spacing: .18em;
+    text-transform: uppercase; margin-bottom: 1.5rem;
+    background: rgba(255,190,60,0.06);
+  }
+
+  .vis-title {
+    font-family: var(--font-display);
+    font-size: 3.8rem; font-weight: 300; line-height: 1.05;
+    margin-bottom: 1.25rem; letter-spacing: -.01em;
+  }
+  .vis-title strong { font-weight: 700; color: var(--amber); display: block; }
+
+  .vis-desc { color: var(--text-md); font-size: .9rem; line-height: 1.8; max-width: 380px; margin-bottom: 2.5rem; }
+
+  .vis-stats { display: flex; gap: 2.5rem; }
+  .vs-item {}
+  .vs-num { font-family: var(--font-display); font-size: 2rem; font-weight: 600; color: var(--amber); line-height: 1; }
+  .vs-lbl { font-size: .65rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim); margin-top: .2rem; }
+
+  /* ── RIGHT PANEL ── */
+  .auth-form-side {
+    display: flex; align-items: center; justify-content: center;
+    padding: 3rem 2.5rem;
+    background: var(--surface);
+    position: relative;
+  }
+
+  .auth-form-side::before {
+    content: '';
+    position: absolute; top: 0; bottom: 0; left: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--amber-dk), transparent);
+    opacity: .5;
+  }
+
+  .form-box { width: 100%; max-width: 400px; }
+
+  .form-header { margin-bottom: 2.25rem; }
+  .form-header h2 {
+    font-family: var(--font-display);
+    font-size: 2.6rem; font-weight: 600; line-height: 1.1;
+    margin-bottom: .4rem;
+  }
+  .form-header p { color: var(--text-md); font-size: .88rem; }
+
+  .input-icon-wrap { position: relative; }
+  .input-icon-wrap .icon {
+    position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
+    color: var(--text-dim); font-size: .9rem; pointer-events: none;
+    transition: color .2s;
+  }
+  .input-icon-wrap input { padding-left: 2.75rem; }
+  .input-icon-wrap input:focus + .icon,
+  .input-icon-wrap:has(input:focus) .icon { color: var(--amber); }
+
+  .row-check {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+  .check-label {
+    display: flex; align-items: center; gap: .5rem;
+    font-size: .82rem; color: var(--text-md); cursor: pointer;
+    text-transform: none; letter-spacing: 0;
+  }
+  .check-label input { width: auto; accent-color: var(--amber); }
+
+  .submit-btn {
+    width: 100%; height: 52px; font-size: .85rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    background: var(--amber); color: #000; border: none;
+    border-radius: var(--radius-sm); cursor: pointer;
+    position: relative; overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+    font-family: var(--font-ui);
+  }
+  .submit-btn::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(to right, transparent 0%, rgba(255,255,255,.18) 50%, transparent 100%);
+    transform: translateX(-100%);
+    transition: transform .5s;
+  }
+  .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 0 30px rgba(255,190,60,.45), 0 8px 20px rgba(0,0,0,.3); }
+  .submit-btn:hover::after { transform: translateX(100%); }
+
+  .auth-switch { margin-top: 1.75rem; text-align: center; font-size: .85rem; color: var(--text-md); }
+  .auth-switch a { color: var(--amber); text-decoration: none; font-weight: 600; }
+  .auth-switch a:hover { text-decoration: underline; }
+
+  @media (max-width: 768px) {
+    .auth-root { grid-template-columns: 1fr; }
+    .auth-visual { display: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-root">
+
+  <!-- ── LEFT VISUAL PANEL ── -->
+  <div class="auth-visual">
+    <div class="data-nodes" id="nodes"></div>
+
+    <div class="visual-content">
+      <a href="#" class="vis-logo">Estate<em>IQ</em></a>
+    </div>
+
+    <div class="vis-bottom">
+      <div class="vis-tag">AI Property Intelligence Platform</div>
+      <h1 class="vis-title">
+        Predict <br>Property<strong>Value.</strong>
+      </h1>
+      <p class="vis-desc">
+        Machine learning models trained on thousands of real transactions deliver precise valuations in seconds.
+      </p>
+      <div class="vis-stats">
+        <div class="vs-item">
+          <div class="vs-num" id="counter1">0</div>
+          <div class="vs-lbl">Accuracy</div>
+        </div>
+        <div class="vs-item">
+          <div class="vs-num" id="counter2">0</div>
+          <div class="vs-lbl">Locations</div>
+        </div>
+        <div class="vs-item">
+          <div class="vs-num" id="counter3">0</div>
+          <div class="vs-lbl">Predictions</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT FORM PANEL ── -->
+  <div class="auth-form-side">
+    <div class="form-box fade-up">
+
+      <div class="form-header">
+        <div class="eyebrow" style="margin-bottom:.6rem;">Welcome Back</div>
+        <h2>Sign <span class="amber">In</span></h2>
+        <p>Access your property intelligence dashboard</p>
+      </div>
+
+      {% for category, message in get_flashed_messages(with_categories=true) %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+
+      <form method="POST" action="{{ url_for('auth.login') }}">
+        <div class="form-group">
+          <label>Email Address</label>
+          <div class="input-icon-wrap">
+            <input type="email" name="email" placeholder="you@example.com" required autocomplete="email"/>
+            <span class="icon">@</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <div class="input-icon-wrap">
+            <input type="password" name="password" id="pwdInput" placeholder="••••••••" required/>
+            <span class="icon" id="pwdToggle" style="cursor:pointer; right:1rem; left:auto;" onclick="togglePwd()">👁</span>
+          </div>
+        </div>
+
+        <div class="row-check">
+          <label class="check-label">
+            <input type="checkbox" name="remember"> Keep me signed in
+          </label>
+        </div>
+
+        <button type="submit" class="submit-btn">Sign In →</button>
+      </form>
+
+      <div class="auth-switch">
+        No account yet? <a href="{{ url_for('auth.register') }}">Create one free</a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Floating nodes animation
+const container = document.getElementById('nodes');
+for (let i = 0; i < 18; i++) {
+  const el = document.createElement('div');
+  el.className = 'node';
+  const size = 20 + Math.random() * 80;
+  const x = Math.random() * 100;
+  const y = Math.random() * 100;
+  const dur = 8 + Math.random() * 14;
+  const dx = (Math.random() - .5) * 120;
+  const dy = (Math.random() - .5) * 120;
+  el.style.cssText = `
+    width:${size}px; height:${size}px;
+    left:${x}%; top:${y}%;
+    --dx:${dx}px; --dy:${dy}px;
+    animation-duration:${dur}s;
+    animation-direction: alternate;
+  `;
+  container.appendChild(el);
+}
+
+// ── Animated counters
+function animCount(el, target, suffix, dur = 1800) {
+  let start = 0;
+  const step = target / (dur / 16);
+  const timer = setInterval(() => {
+    start = Math.min(start + step, target);
+    el.textContent = Math.round(start) + suffix;
+    if (start >= target) clearInterval(timer);
+  }, 16);
+}
+setTimeout(() => {
+  animCount(document.getElementById('counter1'), 98, '%');
+  animCount(document.getElementById('counter2'), 240, '+');
+  animCount(document.getElementById('counter3'), 50, 'K+');
+}, 400);
+
+// ── Password toggle
+function togglePwd() {
+  const inp = document.getElementById('pwdInput');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,11 @@
+flask
+flask-sqlalchemy
+flask-login
+flask-bcrypt
+pandas
+numpy
+scikit-learn
+matplotlib
+plotly
+gunicorn
+pytest
